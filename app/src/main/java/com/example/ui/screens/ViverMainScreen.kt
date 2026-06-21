@@ -999,7 +999,6 @@ fun ViverMainScreen(
             }
         }
     }
-    }
 
     if (showAddDialog) {
         AddBillDialog(
@@ -1161,5 +1160,4 @@ fun WizardTutorial(step: Int, onNext: () -> Unit, onSkip: () -> Unit) {
             }
         }
     }
-}
 }
