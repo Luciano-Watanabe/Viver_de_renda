@@ -996,8 +996,8 @@ fun ViverMainScreen(
                             }
                         }
                     }
+                    }
                 }
-            }
             }
         }
     }

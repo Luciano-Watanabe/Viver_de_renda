@@ -1,0 +1,322 @@
+﻿49: ) {
+58: var selectedTab by remember { mutableStateOf(0) }
+59: var showAddDialog by remember { mutableStateOf(false) }
+60: var showAddAssetDialog by remember { mutableStateOf(false) }
+62: var prefilledTicker by remember { mutableStateOf("") }
+63: var prefilledName by remember { mutableStateOf("") }
+64: var prefilledCategory by remember { mutableStateOf("") }
+65: var prefilledQuantity by remember { mutableStateOf("") }
+66: var prefilledPurchasePrice by remember { mutableStateOf("") }
+67: var prefilledAnnualYield by remember { mutableStateOf("") }
+71: val snackbarHostState = remember { SnackbarHostState() }
+74: var showWizard by remember { mutableStateOf(false) }
+75: var wizardStep by remember { mutableStateOf(0) }
+76: var showNamePrompt by remember { mutableStateOf(false) }
+78: LaunchedEffect(settings.hasSeenTutorial, settings.userName) {
+79: if (settings.userName.isBlank()) {
+81: } else if (!settings.hasSeenTutorial && settings.initialInvestment > 0) {
+83: }
+84: }
+89: val targetCapitalNeeded = if (totalCosts > 0) {
+91: } else {
+93: }
+96: val progressRatio = if (targetCapitalNeeded > 0) {
+98: } else {
+100: }
+103: snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+104: topBar = {
+106: title = {
+107: Column {
+111: ) {
+118: ) {
+125: }
+131: }
+132: if (settings.userName.isNotBlank() && settings.userName != "Investidor") {
+134: text = "OlÃ¡, ${settings.userName}!",
+140: }
+141: }
+142: },
+147: },
+148: floatingActionButton = {
+149: if (selectedTab == 0) {
+151: text = { Text("Nova Conta", fontWeight = FontWeight.Bold) },
+152: icon = { Icon(Icons.Default.Add, contentDescription = "Adicionar conta") },
+153: onClick = { showAddDialog = true },
+158: } else if (selectedTab == 3) {
+160: text = { Text("Adquirir Ativo", fontWeight = FontWeight.Bold) },
+161: icon = { Icon(Icons.Default.Add, contentDescription = "Adicionar ativo comprado") },
+162: onClick = {
+170: },
+175: }
+176: },
+178: ) { innerPadding ->
+183: ) {
+194: ) {
+198: ) {
+203: ) {
+204: val periodFactor = when (settings.returnPeriod.uppercase()) {
+209: }
+211: val periodLabel = when (settings.returnPeriod.uppercase()) {
+216: }
+217: Column {
+230: if (periodFactor > 1.0) {
+236: }
+237: }
+239: Column(horizontalAlignment = Alignment.End) {
+252: }
+253: }
+256: Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+260: ) {
+272: }
+286: text = when {
+289: else -> {
+292: val anosStr = if (anos > 0) "$anos ${if (anos == 1) "ano" else "anos"}" else ""
+293: val mesesStr = if (meses > 0) " e $meses ${if (meses == 1) "mÃªs" else "meses"}" else ""
+295: }
+296: },
+302: }
+303: }
+304: }
+307: LaunchedEffect(progressRatio) {
+308: if (progressRatio > 0) {
+311: if (multipleOf10 >= 10 && multipleOf10 > settings.lastCelebratedProgress) {
+313: coroutineScope.launch {
+318: }
+319: }
+320: }
+321: }
+328: ) {
+331: onClick = { selectedTab = 0 },
+332: text = { Text("1. Contas Fixas", fontWeight = FontWeight.Bold) },
+333: icon = { Icon(Icons.Default.List, contentDescription = "Tab Contas") },
+338: onClick = { selectedTab = 1 },
+339: text = { Text("2. Simulador", fontWeight = FontWeight.Bold) },
+340: icon = { Icon(Icons.Default.Settings, contentDescription = "Tab Simulador") },
+345: onClick = { selectedTab = 2 },
+346: text = { Text("3. SugestÃµes", fontWeight = FontWeight.Bold) },
+347: icon = { Icon(Icons.Default.Star, contentDescription = "Tab Sugestoes") },
+352: onClick = { selectedTab = 3 },
+353: text = { Text("4. Carteira", fontWeight = FontWeight.Bold) },
+354: icon = { Icon(Icons.Default.Home, contentDescription = "Tab Carteira") },
+357: }
+364: ) {
+369: ) { currentTab ->
+370: when (currentTab) {
+371: 0 -> {
+378: ) {
+379: item {
+386: ) {
+387: Column {
+398: }
+401: onClick = { viewModel.resetToDefaults() },
+406: ) {
+410: }
+411: }
+412: }
+414: if (bills.isEmpty()) {
+415: item {
+421: ) {
+425: ) {
+448: onClick = { showAddDialog = true },
+450: ) {
+452: }
+453: }
+454: }
+455: }
+456: } else {
+457: items(bills, key = { it.id }) { bill ->
+460: onToggleActive = { viewModel.toggleBillActive(bill) },
+461: onDelete = { viewModel.deleteBill(bill) },
+462: onUpdateValue = { newVal -> viewModel.updateBillValue(bill, newVal) }
+464: }
+465: }
+466: }
+467: }
+469: 1 -> {
+471: var initialInput by remember { mutableStateOf("") }
+472: var monthlyInput by remember { mutableStateOf("") }
+475: LaunchedEffect(settings) {
+476: if (initialInput.isEmpty() && settings.initialInvestment > 0.0) {
+478: }
+479: if (monthlyInput.isEmpty() && settings.monthlyContribution > 0.0) {
+481: }
+482: }
+490: ) {
+491: item {
+497: ) {
+501: ) {
+511: onValueChange = { initialInput = it },
+512: label = { Text("Aporte Inicial DisponÃ­vel (R$)") },
+513: placeholder = { Text("Ex: 10000") },
+520: leadingIcon = { Text("R$ ", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary,
+526: onValueChange = { monthlyInput = it },
+527: label = { Text("Valor do Aporte Mensal (R$)") },
+528: placeholder = { Text("Ex: 500") },
+535: onDone = {
+544: }
+547: leadingIcon = { Text("R$ ", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary,
+552: onClick = {
+561: },
+569: ) {
+571: }
+574: Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+592: ) {
+593: periods.forEach { (key, label) ->
+596: onClick = {
+603: },
+605: containerColor = if (isSelected) {
+607: } else {
+609: },
+610: contentColor = if (isSelected) {
+612: } else {
+614: }
+621: ) {
+623: }
+624: }
+625: }
+626: }
+627: }
+628: }
+629: }
+632: item {
+637: }
+640: item {
+645: }
+648: item {
+654: }
+655: }
+656: }
+658: 2 -> {
+666: ) {
+668: item {
+670: onAddAssetClick = { asset, units ->
+678: }
+680: }
+682: item {
+688: ) {
+692: ) {
+696: ) {
+703: text = "RecomendaÃ§Ã£o PortfÃ³lio ${settings.returnPeriod.lowercase().replaceFirstChar { it.titlecas
+707: }
+709: val periodFactor = when (settings.returnPeriod.uppercase()) {
+714: }
+716: val periodName = when(settings.returnPeriod.uppercase()) {
+721: }
+734: }
+735: }
+736: }
+738: if (recommendations.isEmpty()) {
+739: item {
+745: ) {
+749: ) {
+770: }
+771: }
+772: }
+773: } else {
+774: items(recommendations, key = { it.asset.ticker }) { rec ->
+778: onAddClick = { asset, units ->
+786: }
+788: }
+789: }
+790: }
+791: }
+793: 3 -> {
+795: val totalInvested = purchasedAssets.sumOf { it.quantity * it.purchasePrice }
+796: val totalMonthlyReturn = purchasedAssets.sumOf { (it.quantity * it.purchasePrice * it.annualYield) /
+805: ) {
+807: item {
+813: ) {
+817: ) {
+828: ) {
+829: Column {
+840: }
+842: Column(horizontalAlignment = Alignment.End) {
+854: }
+855: }
+867: ) {
+879: }
+882: if (purchasedAssets.isNotEmpty()) {
+884: }
+897: text = if (pctCoverage >= 100.0) {
+899: } else {
+901: "Falta $remainingStr em dividendos mensais para cobrir totalmente suas despesas mapeadas (R$ ${Strin
+902: },
+907: }
+908: }
+909: }
+912: item {
+918: }
+921: item {
+928: ) {
+935: text = "${purchasedAssets.size} ativos",
+940: }
+941: }
+943: if (purchasedAssets.isEmpty()) {
+944: item {
+951: ) {
+958: ) {
+971: onClick = {
+979: },
+983: ) {
+985: }
+986: }
+987: }
+988: }
+989: } else {
+990: items(purchasedAssets, key = { it.id }) { asset ->
+993: onDelete = { viewModel.deletePurchasedAsset(asset) }
+995: }
+996: }
+997: }
+998: }
+999: }
+1000: }
+1001: }
+1002: }
+1003: }
+1005: if (showAddDialog) {
+1007: onDismiss = { showAddDialog = false },
+1008: onConfirm = { name, value -> viewModel.addBill(name, value) }
+1010: }
+1012: if (showAddAssetDialog) {
+1020: onDismiss = {
+1028: },
+1029: onConfirm = { ticker, name, category, quantity, purchasePrice, annualYield ->
+1031: }
+1033: }
+1034: }
+1037: fun PortfolioPieChart(purchasedAssets: List<PurchasedAsset>) {
+1038: val grouped = purchasedAssets.groupBy { it.category }
+1039: val categoryTotals = grouped.mapValues { entry -> entry.value.sumOf { it.quantity * it.purchasePrice
+1051: ) {
+1061: Box(contentAlignment = Alignment.Center, modifier = Modifier.size(160.dp)) {
+1062: androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+1067: categoryTotals.forEach { (category, value) ->
+1081: }
+1082: }
+1090: }
+1097: ) {
+1098: categoryTotals.forEach { (category, value) ->
+1101: Row(verticalAlignment = Alignment.CenterVertically) {
+1105: text = "$category (${String.format(Locale("pt", "BR"), "%.0f", percentage)}%)",
+1109: }
+1110: }
+1111: }
+1112: }
+1113: }
+1116: fun WizardTutorial(step: Int, onNext: () -> Unit, onSkip: () -> Unit) {
+1125: onDismissRequest = { onSkip() },
+1127: ) {
+1132: ) {
+1137: ) {
+1139: text = "Passo ${step + 1} de 4",
+1154: ) {
+1155: TextButton(onClick = onSkip) {
+1157: }
+1158: Button(onClick = onNext) {
+1160: }
+1161: }
+1162: }
+1163: }
+1164: }
+1165: }
