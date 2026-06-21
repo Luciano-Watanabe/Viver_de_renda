@@ -1,5 +1,11 @@
 package com.example.data.model
 
+import java.net.HttpURLConnection
+import java.net.URL
+import org.json.JSONObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 data class Asset(
     val ticker: String,
     val name: String,
@@ -12,7 +18,7 @@ data class Asset(
 
 object AssetSuggestionEngine {
 
-    val availableAssets = listOf(
+    var availableAssets = listOf(
         // FIIs (Mensal)
         Asset(
             ticker = "MXRF11",
@@ -185,6 +191,37 @@ object AssetSuggestionEngine {
         val estimatedYieldValue: Double, // Value generated per frequency period
         val unitsToBuy: Int // Number of shares / bonds
     )
+
+    suspend fun updateLivePrices() = withContext(Dispatchers.IO) {
+        val updatedList = availableAssets.map { asset ->
+            if (asset.category != "Tesouro Direto") {
+                try {
+                    // Yahoo Finance API
+                    val symbol = if (asset.ticker.endsWith(".SA")) asset.ticker else "${asset.ticker}.SA"
+                    val urlString = "https://query1.finance.yahoo.com/v8/finance/chart/$symbol"
+                    val url = URL(urlString)
+                    val connection = url.openConnection() as HttpURLConnection
+                    connection.requestMethod = "GET"
+                    connection.connectTimeout = 5000
+                    connection.readTimeout = 5000
+                    
+                    if (connection.responseCode == 200) {
+                        val response = connection.inputStream.bufferedReader().use { it.readText() }
+                        val json = JSONObject(response)
+                        val result = json.getJSONObject("chart").getJSONArray("result").getJSONObject(0)
+                        val meta = result.getJSONObject("meta")
+                        val currentPrice = meta.getDouble("regularMarketPrice")
+                        
+                        return@map asset.copy(averagePrice = currentPrice)
+                    }
+                } catch (e: Exception) {
+                    // Fallback to existing static price
+                }
+            }
+            asset
+        }
+        availableAssets = updatedList
+    }
 
     fun getRecommendations(
         monthlyRequirement: Double, // e.g. 3000

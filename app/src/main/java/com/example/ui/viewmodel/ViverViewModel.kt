@@ -47,11 +47,16 @@ class ViverViewModel(private val repository: ViverRepository) : ViewModel() {
             initialValue = 0.0
         )
 
+    // Trigger for when live prices update
+    private val _livePricesUpdated = MutableStateFlow(0)
+    val livePricesUpdated: StateFlow<Int> = _livePricesUpdated
+
     // Derived State: Asset Recommendations
     val recommendations: StateFlow<List<AssetSuggestionEngine.AssetRecommendation>> = combine(
         totalFixedCosts,
-        settings
-    ) { costs, settingsObj ->
+        settings,
+        livePricesUpdated
+    ) { costs, settingsObj, _ ->
         AssetSuggestionEngine.getRecommendations(costs, settingsObj.returnPeriod)
     }.stateIn(
         scope = viewModelScope,
@@ -98,6 +103,12 @@ class ViverViewModel(private val repository: ViverRepository) : ViewModel() {
         // Pre-populate database with suggested bills on startup if empty
         viewModelScope.launch {
             repository.populateDefaultBills()
+        }
+        
+        // Fetch live prices for assets from Yahoo Finance
+        viewModelScope.launch {
+            AssetSuggestionEngine.updateLivePrices()
+            _livePricesUpdated.value += 1
         }
     }
 
@@ -164,6 +175,27 @@ class ViverViewModel(private val repository: ViverRepository) : ViewModel() {
                 monthlyContribution = monthly,
                 returnPeriod = period
             )
+            repository.saveSettings(updated)
+        }
+    }
+
+    fun updateTutorialStatus(seen: Boolean) {
+        viewModelScope.launch {
+            val updated = settings.value.copy(hasSeenTutorial = seen)
+            repository.saveSettings(updated)
+        }
+    }
+
+    fun updateCelebratedProgress(progress: Int) {
+        viewModelScope.launch {
+            val updated = settings.value.copy(lastCelebratedProgress = progress)
+            repository.saveSettings(updated)
+        }
+    }
+
+    fun updateUserName(name: String) {
+        viewModelScope.launch {
+            val updated = settings.value.copy(userName = name.trim())
             repository.saveSettings(updated)
         }
     }

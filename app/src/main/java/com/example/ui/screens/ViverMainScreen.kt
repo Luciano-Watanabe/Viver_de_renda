@@ -29,6 +29,15 @@ import com.example.ui.components.*
 import com.example.ui.viewmodel.ViverViewModel
 import com.example.data.model.Asset
 import com.example.data.model.AssetSuggestionEngine
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,6 +66,21 @@ fun ViverMainScreen(
     var prefilledAnnualYield by remember { mutableStateOf("") }
 
     val focusManager = LocalFocusManager.current
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Wizard Tutorial State
+    var showWizard by remember { mutableStateOf(false) }
+    var wizardStep by remember { mutableStateOf(0) }
+    var showNamePrompt by remember { mutableStateOf(false) }
+
+    LaunchedEffect(settings.hasSeenTutorial, settings.userName) {
+        if (settings.userName.isBlank()) {
+            showNamePrompt = true
+        } else if (!settings.hasSeenTutorial && settings.initialInvestment > 0) {
+            showWizard = true
+        }
+    }
 
     // Compute approximate target capital required to generate the total fixed expenses
     // Assuming a conservative average portfolio yield of 8.5% annual (which is ~0.7% monthly)
@@ -68,33 +92,44 @@ fun ViverMainScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.primary)
-                                ,
-                            contentAlignment = Alignment.Center
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.primary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "$",
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
                             Text(
-                                text = "$",
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleMedium
+                                text = "Viver de Renda",
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp
                             )
                         }
-                        Text(
-                            text = "Viver de Renda",
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = (-0.5).sp
-                        )
+                        if (settings.userName.isNotBlank() && settings.userName != "Investidor") {
+                            Text(
+                                text = "Olá, ${settings.userName}!",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(top = 2.dp, start = 44.dp)
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -267,6 +302,23 @@ fun ViverMainScreen(
                 }
             }
 
+            // Gamification Effect Check
+            LaunchedEffect(progressRatio) {
+                if (progressRatio > 0) {
+                    val progressInt = (progressRatio * 100).toInt()
+                    val multipleOf10 = (progressInt / 10) * 10
+                    if (multipleOf10 >= 10 && multipleOf10 > settings.lastCelebratedProgress) {
+                        viewModel.updateCelebratedProgress(multipleOf10)
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "🎉 Incrível! Seus rendimentos já cobrem $multipleOf10% das suas contas!",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                    }
+                }
+            }
+
             // --- NAVIGATION TABS ---
             TabRow(
                 selectedTabIndex = selectedTab,
@@ -303,13 +355,18 @@ fun ViverMainScreen(
                 )
             }
 
-            // --- TAB CONTENT ---
+            // --- TAB CONTENT WITH ANIMATION ---
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                when (selectedTab) {
+                Crossfade(
+                    targetState = selectedTab,
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 300),
+                    label = "TabTransition"
+                ) { currentTab ->
+                    when (currentTab) {
                     0 -> {
                         // --- TAB 1: FIXED BILLS LIST ---
                         LazyColumn(
@@ -366,18 +423,31 @@ fun ViverMainScreen(
                                             verticalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.Info,
+                                                imageVector = Icons.Default.ShoppingCart,
                                                 contentDescription = "Sem contas",
-                                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                                modifier = Modifier.size(48.dp)
+                                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                                                modifier = Modifier.size(64.dp)
                                             )
                                             Text(
-                                                text = "Nenhuma conta fixa salva.",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                                text = "Sua jornada rumo à liberdade financeira começa aqui!",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                                             )
-                                            Button(onClick = { showAddDialog = true }) {
-                                                Text("Adicionar Primeira")
+                                            Text(
+                                                text = "Cadastre suas despesas para descobrirmos quanto você precisa investir.",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                textAlign = TextAlign.Center,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                                modifier = Modifier.padding(horizontal = 32.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Button(
+                                                onClick = { showAddDialog = true },
+                                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                            ) {
+                                                Text("Adicionar Primeira Despesa", fontWeight = FontWeight.Bold)
                                             }
                                         }
                                     }
@@ -672,12 +742,31 @@ fun ViverMainScreen(
                                             .padding(top = 40.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(
-                                            text = "Adicione contas fixas na aba '1. Contas Fixas' para gerar sugestões de investimentos.",
-                                            textAlign = TextAlign.Center,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                        )
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Star,
+                                                contentDescription = "Descubra a mágica",
+                                                tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
+                                                modifier = Modifier.size(64.dp)
+                                            )
+                                            Text(
+                                                text = "Descubra o poder dos juros compostos!",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                            )
+                                            Text(
+                                                text = "Adicione contas fixas na aba '1. Contas Fixas' para ver a mágica acontecer.",
+                                                textAlign = TextAlign.Center,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                                modifier = Modifier.padding(horizontal = 32.dp)
+                                            )
+                                        }
                                     }
                                 }
                             } else {
@@ -776,17 +865,21 @@ fun ViverMainScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "Cobertura das Contas Fixas:",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                text = "Cobertura do Custo de Vida:",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                             )
                                             Text(
-                                                text = String.format(Locale("pt", "BR"), "%.2f%% coberto", pctCoverage),
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = if (pctCoverage >= 100.0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                                text = String.format(Locale("pt", "BR"), "%.1f%%", pctCoverage),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (pctCoverage >= 100.0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary
                                             )
+                                        }
+                                        
+                                        // Dynamic Pie Chart for Portfolio Balance
+                                        if (purchasedAssets.isNotEmpty()) {
+                                            PortfolioPieChart(purchasedAssets = purchasedAssets)
                                         }
 
                                         LinearProgressIndicator(
@@ -900,11 +993,11 @@ fun ViverMainScreen(
                                     )
                                 }
                             }
-                        }
                     }
                 }
             }
         }
+    }
     }
 
     if (showAddDialog) {

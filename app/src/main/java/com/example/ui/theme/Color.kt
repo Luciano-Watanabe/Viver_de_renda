@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 // Light Theme Colors
 val WealthGreenLight = Color(0xFF1B5E20)       // Primary deep green
 val WealthGreenAccent = Color(0xFF4CAF50)      // Accent green
-val GoldAccentLight = Color(0xFFF9A825)        // Amber/gold for warnings/targets
+val GoldAccentLight = Color(0xFFF57F17)        // Darker amber/gold for better contrast
 val BackgroundCream = Color(0xFFF7F9F6)        // Clean grayish cream background
 val DarkSlateText = Color(0xFF1E293B)          // Charcoal text
 val CardSurfaceLight = Color(0xFFFFFFFF)       // White card background

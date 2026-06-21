@@ -8,5 +8,8 @@ data class InvestmentSettings(
     @PrimaryKey val id: Int = 1,
     val initialInvestment: Double = 10000.0,
     val monthlyContribution: Double = 500.0,
-    val returnPeriod: String = "MENSAL" // "MENSAL", "TRIMESTRAL", "SEMESTRAL", "ANUAL"
+    val returnPeriod: String = "MENSAL", // "MENSAL", "TRIMESTRAL", "SEMESTRAL", "ANUAL"
+    val hasSeenTutorial: Boolean = false,
+    val lastCelebratedProgress: Int = 0,
+    val userName: String = ""
 )
