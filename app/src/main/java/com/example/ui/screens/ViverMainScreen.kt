@@ -1090,12 +1090,12 @@ fun ViverMainScreen(
                 if (wizardStep < 3) wizardStep++
                 else {
                     showWizard = false
-                    viewModel.completeTutorial()
+                    viewModel.updateTutorialStatus(true)
                 }
             },
             onSkip = {
                 showWizard = false
-                viewModel.completeTutorial()
+                viewModel.updateTutorialStatus(true)
             }
         )
     }
